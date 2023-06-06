@@ -28,6 +28,14 @@ pub fn register_early_global_fns(site: &mut Site) -> TeraResult<()> {
         ),
     );
     site.tera.register_function(
+        "noir",
+        global_fns::NoirImage::new(
+            site.base_path.clone(),
+            site.imageproc.clone(),
+            site.output_path.clone(),
+        ),
+    );
+    site.tera.register_function(
         "get_image_metadata",
         global_fns::GetImageMetadata::new(
             site.base_path.clone(),

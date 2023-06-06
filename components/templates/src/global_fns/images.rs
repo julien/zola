@@ -137,6 +137,65 @@ impl TeraFn for GetImageMetadata {
     }
 }
 
+#[derive(Debug)]
+pub struct NoirImage {
+    base_path: PathBuf,
+    imageproc: Arc<Mutex<imageproc::Processor>>,
+    output_path: PathBuf,
+}
+
+impl NoirImage {
+    pub fn new(
+        base_path: PathBuf,
+        imageproc: Arc<Mutex<imageproc::Processor>>,
+        output_path: PathBuf,
+    ) -> Self {
+        Self { base_path, imageproc, output_path }
+    }
+}
+
+impl TeraFn for NoirImage {
+    fn call(&self, args: &HashMap<String, Value>) -> Result<Value> {
+        let path = required_arg!(
+            String,
+            args.get("path"),
+            "`noir` requires a `path` argument with a string value"
+        );
+        let width = optional_arg!(
+            u32,
+            args.get("width"),
+            "`resize_image`: `width` must be a non-negative integer"
+        );
+        let height = optional_arg!(
+            u32,
+            args.get("height"),
+            "`resize_image`: `height` must be a non-negative integer"
+        );
+
+        let op = "grayscale";
+        let resize_op = imageproc::ResizeOperation::from_args(&op, width, height)
+            .map_err(|e| format!("`noir`: {}", e))?;
+        let format = "auto";
+        let quality = Some(100);
+        let mut imageproc = self.imageproc.lock().unwrap();
+        let (file_path, unified_path) =
+            match search_for_file(&self.base_path, &path, &None, &self.output_path)
+                .map_err(|e| format!("`noir`: {}", e))?
+            {
+                Some(f) => f,
+                None => {
+                    return Err(format!("`noir`: Cannot find file: {}", path).into());
+                }
+            };
+
+        let response = imageproc
+            .enqueue(resize_op, unified_path, file_path, &format, quality)
+            .map_err(|e| format!("`noir`: {}", e))?;
+
+        to_value(response).map_err(Into::into)
+    }
+}
+
 #[cfg(test)]
 mod tests {
     use super::{GetImageMetadata, ResizeImage};

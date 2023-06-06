@@ -48,6 +48,10 @@ impl ImageOp {
             Some((w, h)) => img.resize_exact(w, h, FilterType::Lanczos3),
             None => img,
         };
+        let img = match self.instr.grayscale_instruction {
+            Some((w, h)) => img.resize_exact(w, h, FilterType::Lanczos3).grayscale(),
+            None => img,
+        };
 
         let img = fix_orientation(&img, &self.input_path).unwrap_or(img);
 
